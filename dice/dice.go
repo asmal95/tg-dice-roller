@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-var compRegEx = regexp.MustCompile(`^(?P<mod>[+-])?(?P<count>[0-9]+)?d(?P<edge>[0-9]+)(?P<op>[+-])?(?P<additional>[0-9]+)?$`)
+var compRegEx = regexp.MustCompile(`^(?P<mod>[+-])?(?P<count>[0-9]+)?d(?P<edge>[0-9]+)(?P<additional>[+-][0-9]+)?$`)
 var randomSource = rand.NewSource(time.Now().UnixNano())
 var randGenerator = rand.New(randomSource)
 
@@ -34,14 +34,8 @@ func Roll(str string) (int, string, error) {
 		return 0, "", fmt.Errorf("incorrect exression: %v", str)
 	}
 	toAdd := 0
-	if op, additional := dict["op"], dict["additional"]; op != "" && additional != "" {
-		parsed, _ := strconv.Atoi(additional)
-		switch op {
-		case "-":
-			toAdd = -parsed
-		case "+":
-			toAdd = parsed
-		}
+	if additional := dict["additional"]; additional != "" {
+		toAdd, _ = strconv.Atoi(additional)
 	}
 	res, explanation := roll(edge, count, toAdd)
 
@@ -73,7 +67,9 @@ func roll(edge, count, additional int) (int, string) {
 	for i := 0; i < count; i++ {
 		r := randGenerator.Intn(edge) + 1
 		res += r
-		explanation += strconv.Itoa(r)
+		if count > 1 || additional != 0 {
+			explanation += strconv.Itoa(r)
+		}
 		if i < count-1 {
 			explanation += " + "
 		}

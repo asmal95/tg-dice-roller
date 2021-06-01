@@ -6,15 +6,18 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"strings"
 	"tg-dice-roller/dice"
 	"time"
 )
 
-var token string
-var Bot *tgbotapi.BotAPI
-var cache = make(map[int][]string, 0)
 var randomSource = rand.NewSource(time.Now().UnixNano())
 var randGenerator = rand.New(randomSource)
+
+var token string
+var Bot *tgbotapi.BotAPI
+
+var cache = make(map[int][]string, 0)
 
 func init() {
 	token = os.Getenv("BOT_TOKEN")
@@ -38,75 +41,90 @@ func Start() {
 	updates, err := bot.GetUpdatesChan(updateConfig)
 
 	for update := range updates {
+		chosenResult := update.ChosenInlineResult
 		query := update.InlineQuery
+
+		if chosenResult != nil && chosenResult.Query != "" { // change it (!= "") if the cache rotation should be implemented
+			trimmedQuery := strings.ReplaceAll(chosenResult.Query, " ", "")
+			updateCache(chosenResult.From.ID, trimmedQuery)
+			continue
+		}
+
 		if query != nil {
-
-			fmt.Printf("query: %v, %v\n", query.ID, query.Query)
 			var responses []interface{}
-
-			if query.Query == "" { //todo optimize duplicated code
+			trimmedQuery := strings.ReplaceAll(query.Query, " ", "")
+			if trimmedQuery == "" {
 				for _, str := range cache[query.From.ID] {
-					res, explanation, err := dice.Roll(str)
+					res, err := prepareInlineResult(str, str)
 					if err != nil {
 						continue
 					}
-					message := fmt.Sprintf("<u>%v:</u> %v = <b>%v</b>", str, explanation, res)
-
-					responses = append(responses, tgbotapi.InlineQueryResultArticle{
-						Type:  "article",
-						ID:    strconv.FormatInt(randGenerator.Int63(), 10),
-						Title: str,
-
-						InputMessageContent: map[string]string{
-							"message_text": message,
-							"parse_mode":   "HTML",
-						},
-					})
+					responses = append(responses, res)
 				}
-				inlineConfig := tgbotapi.InlineConfig{
-					InlineQueryID: query.ID,
-					Results:       responses,
+			} else {
+				res, err := prepareInlineResult(trimmedQuery, "Roll it!")
+				if err != nil {
+					continue
 				}
-				_, err = Bot.AnswerInlineQuery(inlineConfig)
-
-				continue
+				responses = append(responses, res)
 			}
-
-			//todo add timeout
-			res, explanation, err := dice.Roll(query.Query)
-			if err != nil {
-				continue
-			}
-			updateCache(query.From.ID, query.Query) //todo use choseninlineresult to rotate the cache
-
-			message := fmt.Sprintf("<u>%v:</u> %v = <b>%v</b>", query.Query, explanation, res)
-			responses = append(responses, tgbotapi.InlineQueryResultArticle{
-				Type:  "article",
-				ID:    strconv.FormatInt(time.Now().UnixNano(), 10),
-				Title: "Roll it!",
-
-				InputMessageContent: map[string]string{
-					"message_text": message,
-					"parse_mode":   "HTML",
-				},
-			})
-
-			inlineConfig := tgbotapi.InlineConfig{
-				InlineQueryID: query.ID,
-				Results:       responses,
-			}
-			_, err = Bot.AnswerInlineQuery(inlineConfig)
+			answerInline(responses, query.ID)
 		}
 	}
 }
 
 func updateCache(userId int, query string) {
+	if contains(cache[userId], query) { //todo rotate cache to move to top the often-used roll
+		return
+	}
 	if len(cache[userId]) < 5 {
-		cache[userId] = append(cache[userId], query) //todo check existence
+		cache[userId] = append(cache[userId], query)
 	} else {
 		for i := 0; i < len(cache[userId])-1; i++ {
 			cache[userId][i] = cache[userId][i+1]
 		}
 		cache[userId][4] = query
 	}
+}
+
+func contains(slice []string, elem string) bool {
+	for _, s := range slice {
+		if s == elem {
+			return true
+		}
+	}
+	return false
+}
+
+func prepareInlineResult(rollStr, title string) (tgbotapi.InlineQueryResultArticle, error) {
+	res, explanation, err := dice.Roll(rollStr)
+	if err != nil {
+		fmt.Printf("Can't roll the dice: %v, error: %v", rollStr, err)
+		return tgbotapi.InlineQueryResultArticle{}, err
+	}
+	var message string
+	if explanation != "" {
+		message = fmt.Sprintf("<u>%v:</u> %v = <b>%v</b>", rollStr, explanation, res)
+	} else {
+		message = fmt.Sprintf("<u>%v:</u> <b>%v</b>", rollStr, res)
+	}
+
+	return tgbotapi.InlineQueryResultArticle{
+		Type:  "article",
+		ID:    strconv.FormatInt(randGenerator.Int63(), 10),
+		Title: title,
+		InputMessageContent: map[string]string{
+			"message_text": message,
+			"parse_mode":   "HTML",
+		},
+	}, nil
+}
+
+func answerInline(responses []interface{}, queryId string) {
+	inlineConfig := tgbotapi.InlineConfig{
+		InlineQueryID: queryId,
+		Results:       responses,
+		CacheTime:     0,
+	}
+	_, _ = Bot.AnswerInlineQuery(inlineConfig)
 }
