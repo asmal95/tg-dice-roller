@@ -15,12 +15,18 @@ var randomSource = rand.NewSource(time.Now().UnixNano())
 var randGenerator = rand.New(randomSource)
 
 var token string
+var debug = false
 var Bot *tgbotapi.BotAPI
 
 var cache = make(map[int][]string, 0)
 
 func init() {
 	token = os.Getenv("BOT_TOKEN")
+
+	debugEnv := os.Getenv("BOT_DEBUG")
+	if debugEnv != "" {
+		debug, _ = strconv.ParseBool(debugEnv)
+	}
 }
 
 func main() {
@@ -32,7 +38,8 @@ func Start() {
 	if err != nil {
 		panic(err)
 	}
-	bot.Debug = true
+
+	bot.Debug = debug
 	Bot = bot
 
 	updateConfig := tgbotapi.NewUpdate(0)
