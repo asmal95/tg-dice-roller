@@ -37,10 +37,12 @@ func Roll(str string) (int, string, error) {
 	if additional := dict["additional"]; additional != "" {
 		toAdd, _ = strconv.Atoi(additional)
 	}
-	res, explanation := roll(edge, count, toAdd)
+	mod := dict["mod"]
 
-	if mod := dict["mod"]; mod != "" {
-		modRes, modExplanation := roll(edge, count, toAdd)
+	res, explanation := roll(edge, count, toAdd, mod != "")
+
+	if mod != "" {
+		modRes, modExplanation := roll(edge, count, toAdd, true)
 		switch mod {
 		case "-":
 			if modRes < res {
@@ -58,7 +60,7 @@ func Roll(str string) (int, string, error) {
 	return res, explanation, nil
 }
 
-func roll(edge, count, additional int) (int, string) {
+func roll(edge, count, additional int, explainSingle bool) (int, string) {
 	res := 0
 	explanation := ""
 	if count > 1 {
@@ -67,7 +69,7 @@ func roll(edge, count, additional int) (int, string) {
 	for i := 0; i < count; i++ {
 		r := randGenerator.Intn(edge) + 1
 		res += r
-		if count > 1 || additional != 0 {
+		if count > 1 || additional != 0 || explainSingle {
 			explanation += strconv.Itoa(r)
 		}
 		if i < count-1 {

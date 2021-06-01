@@ -99,7 +99,7 @@ func contains(slice []string, elem string) bool {
 func prepareInlineResult(rollStr, title string) (tgbotapi.InlineQueryResultArticle, error) {
 	res, explanation, err := dice.Roll(rollStr)
 	if err != nil {
-		fmt.Printf("Can't roll the dice: %v, error: %v", rollStr, err)
+		fmt.Printf("Can't roll the dice: %v, error: %v\n", rollStr, err)
 		return tgbotapi.InlineQueryResultArticle{}, err
 	}
 	var message string
