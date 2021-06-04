@@ -21,6 +21,11 @@ func TestRolld20(t *testing.T) {
 	fmt.Printf("%v = %v\n", ex, res)
 }
 
+func TestRolld0(t *testing.T) {
+	res, ex, _ := Roll("d0")
+	fmt.Printf("%v = %v\n", ex, res)
+}
+
 func TestRollIncorrect(t *testing.T) {
 	_, _, err := Roll("asdg")
 	if err != nil {

@@ -67,7 +67,7 @@ func roll(edge, count, additional int, explainSingle bool) (int, string) {
 		explanation += "("
 	}
 	for i := 0; i < count; i++ {
-		r := randGenerator.Intn(edge) + 1
+		r := randomDice(edge)
 		res += r
 		if count > 1 || additional != 0 || explainSingle {
 			explanation += strconv.Itoa(r)
@@ -86,6 +86,13 @@ func roll(edge, count, additional int, explainSingle bool) (int, string) {
 		explanation += " - " + strconv.Itoa(-additional)
 	}
 	return res, explanation
+}
+
+func randomDice(edge int) int {
+	if edge <= 0 {
+		return edge
+	}
+	return randGenerator.Intn(edge) + 1
 }
 
 func getParams(url string) (paramsMap map[string]string) {
