@@ -33,6 +33,10 @@ func Roll(str string) (int, string, error) {
 	} else {
 		return 0, "", fmt.Errorf("incorrect exression: %v", str)
 	}
+	err := validateParams(edge, count)
+	if err != nil {
+		return 0, "", err
+	}
 	toAdd := 0
 	if additional := dict["additional"]; additional != "" {
 		toAdd, _ = strconv.Atoi(additional)
@@ -40,7 +44,6 @@ func Roll(str string) (int, string, error) {
 	mod := dict["mod"]
 
 	res, explanation := roll(edge, count, toAdd, mod != "")
-
 	if mod != "" {
 		modRes, modExplanation := roll(edge, count, toAdd, true)
 		switch mod {
@@ -58,6 +61,16 @@ func Roll(str string) (int, string, error) {
 	}
 
 	return res, explanation, nil
+}
+
+func validateParams(edge, count int) error { // todo handle the errors and display the message to the user
+	if edge <= 0 || edge > 10000 {
+		return fmt.Errorf("can't process the %v edge: the edge should be more than 0 and less than 10001", edge)
+	}
+	if count <= 0 || count > 30 {
+		return fmt.Errorf("can't throw the dice %v times: the it should be more than 0 and less than 30", count)
+	}
+	return nil
 }
 
 func roll(edge, count, additional int, explainSingle bool) (int, string) {
@@ -89,9 +102,6 @@ func roll(edge, count, additional int, explainSingle bool) (int, string) {
 }
 
 func randomDice(edge int) int {
-	if edge <= 0 {
-		return edge
-	}
 	return randGenerator.Intn(edge) + 1
 }
 
